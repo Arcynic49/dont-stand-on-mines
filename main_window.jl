@@ -67,8 +67,17 @@ function makeminefield(numrows, numcolumns, nummines)
     return mine_field
 end
 
-function on_button_clicked(w)
-  println("Button $(w.row), $(w.column) has been clicked")
+function on_button_clicked(widget, event)
+    if event.button == 1
+        mousebutton = "left"
+    elseif event.button == 3
+        mousebutton = "right"
+    else
+        moustbutton = "?"
+    end
+
+    println("Button $(widget.row), $(widget.column) has been $mousebutton clicked")
+    println(event)
 end
 
 function updatefield!(array, grid)
@@ -92,7 +101,9 @@ push!(win, grid)
 maxrow, maxcolumn = size(minefield)
 for i = 1:maxcolumn, j=1:maxrow
     b = MineButton(j, i)
-    signal_connect(on_button_clicked, b, "clicked")
+    signal_connect(b, "button-release-event") do widget, event
+        on_button_clicked(widget, event)
+    end
     setindex!(grid, b, i, j)
 end
 
