@@ -48,6 +48,7 @@ function getneighbors(array, row, column)
     return neighbors
 end
 
+# Given an array with just mine flags set, update the neighbor counts
 function setneighborcount!(array, square::Minesquare)
     square.neighborcount = 0
     neighbors = getneighbors(array, square.row, square.column)
@@ -58,6 +59,7 @@ function setneighborcount!(array, square::Minesquare)
     end
 end
 
+# Make an array of Minesquares, mine it, then update neighbor counts
 function makeminefield(numrows, numcolumns, nummines)
     mine_field  = [Minesquare(i, j) for i=1:numrows, j=1:numcolumns]
     seedfield!(mine_field, nummines)
@@ -67,27 +69,30 @@ function makeminefield(numrows, numcolumns, nummines)
     return mine_field
 end
 
+# Main testing logic shoud go here
 function on_button_clicked(widget, event)
     if event.button == 1
         mousebutton = "left"
     elseif event.button == 3
         mousebutton = "right"
     else
-        moustbutton = "?"
+        mousebutton = "?"
     end
 
     println("Button $(widget.row), $(widget.column) has been $mousebutton clicked")
-    println(event)
 end
 
+# This should be changed into a proper update function
+# Revealed tiles, flagged, etc. Should account for failure states too.
 function updatefield!(array, grid)
     maxrow, maxcolumn = size(array)
     for i=1:maxrow, j=1:maxcolumn
         tile = array[i, j]
+        uitile = getindex(grid, j, i)
         if tile.mined
-            set_gtk_property!(getindex(grid, j, i), :label, "B")
+            set_gtk_property!(uitile, :label, "B")
         else
-            set_gtk_property!(getindex(grid, j, i), :label, tile.neighborcount)
+            set_gtk_property!(uitile, :label, tile.neighborcount)
         end
     end
 end
@@ -102,7 +107,24 @@ maxrow, maxcolumn = size(minefield)
 for i = 1:maxcolumn, j=1:maxrow
     b = MineButton(j, i)
     signal_connect(b, "button-release-event") do widget, event
-        on_button_clicked(widget, event)
+        # on_button_clicked(widget, event)
+        if event.button == 1
+            mousebutton = "left"
+            # If revealed make sure still toggled
+            # If flagged make sure stays untoggled
+            # If mined game over
+            # Otherwise reveal self and set toggle
+            # If self count = 0 reveal all unrevealed neighbors
+        elseif event.button == 3
+            mousebutton = "right"
+            # If revealed do nothing
+            # If flagged unflag
+        else
+            mousebutton = "?"
+            # Middle mouse is "2"
+            # Maybe use for revealed square with correct total flags
+        end
+        # Update the field
     end
     setindex!(grid, b, i, j)
 end
