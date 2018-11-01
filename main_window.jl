@@ -12,6 +12,8 @@ end
 Minesquare() = Minesquare(1, 1, false, false, false, 0)
 Minesquare(x, y) = Minesquare(x, y, false, false, false, 0)
 
+@enum GameState firstmove playing mined finished
+
 mutable struct MineButton <: Gtk.GtkToggleButton
     handle::Ptr{Gtk.GObject}
     row
@@ -19,6 +21,8 @@ mutable struct MineButton <: Gtk.GtkToggleButton
 
     function MineButton(row, column)
         btn = GtkToggleButton()
+        set_gtk_property!(btn, "width-request", 20)
+        set_gtk_property!(btn, "height-request", 20)
         return Gtk.gobject_move_ref(new(btn.handle, row, column), btn)
     end
 end
@@ -89,45 +93,68 @@ function updatefield!(array, grid)
     for i=1:maxrow, j=1:maxcolumn
         tile = array[i, j]
         uitile = getindex(grid, j, i)
-        if tile.mined
-            set_gtk_property!(uitile, :label, "B")
+        if tile.revealed
+            if tile.mined
+                set_gtk_property!(uitile, :label, "B")
+            else
+                set_gtk_property!(uitile, :label, tile.neighborcount)
+            end
+            set_gtk_property!(uitile, :active, true)
+        elseif tile.flagged
+            set_gtk_property!(uitile, :active, false)
+            set_gtk_property!(uitile, :label, "F")
         else
-            set_gtk_property!(uitile, :label, tile.neighborcount)
+            set_gtk_property!(uitile, :label, "")
         end
     end
 end
 
-minefield = makeminefield(16, 30, 99)
 
+game = firstmove
 win = GtkWindow("Don't Stand on Mines", 400, 200)
 grid = GtkGrid()
 push!(win, grid)
-
+minefield = makeminefield(16, 30, 99)
 maxrow, maxcolumn = size(minefield)
 for i = 1:maxcolumn, j=1:maxrow
     b = MineButton(j, i)
     signal_connect(b, "button-release-event") do widget, event
         # on_button_clicked(widget, event)
+        tile = minefield[widget.row, widget.column]
+        # This should just change tile state
         if event.button == 1
-            mousebutton = "left"
+            # left click
             # If revealed make sure still toggled
-            # If flagged make sure stays untoggled
-            # If mined game over
-            # Otherwise reveal self and set toggle
-            # If self count = 0 reveal all unrevealed neighbors
+            if !tile.flagged
+                if tile.mined
+                    tile.revealed = true
+                    game = mined
+                    println("Tile mined.")
+                    println(game)
+                # Otherwise reveal self and set toggle
+                else
+                    tile.revealed = true
+                    println("Newly revealed tile.")
+                    # If self count = 0 reveal all unrevealed neighbors
+                end
+                set_gtk_property!(widget, :active, true)
+            end
         elseif event.button == 3
-            mousebutton = "right"
+            # right click
             # If revealed do nothing
             # If flagged unflag
-        else
-            mousebutton = "?"
+            if !tile.revealed
+                tile.flagged = !tile.flagged
+            end
+        elseif event.button == 2
             # Middle mouse is "2"
             # Maybe use for revealed square with correct total flags
+        else
         end
         # Update the field
+        updatefield!(minefield, grid)
     end
     setindex!(grid, b, i, j)
 end
 
-updatefield!(minefield, grid)
 showall(win)
