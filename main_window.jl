@@ -109,6 +109,16 @@ function updatefield!(array, grid)
     end
 end
 
+function revealtiles!(array, tile)
+    tile.revealed = true
+    if tile.neighborcount == 0
+        neighbors = filter(x -> !x.revealed,
+                        getneighbors(array, tile.row, tile.column))
+        for neighbor in neighbors
+            revealtiles!(array, neighbor)
+        end
+    end
+end
 
 game = firstmove
 win = GtkWindow("Don't Stand on Mines", 400, 200)
@@ -133,7 +143,7 @@ for i = 1:maxcolumn, j=1:maxrow
                     println(game)
                 # Otherwise reveal self and set toggle
                 else
-                    tile.revealed = true
+                    revealtiles!(minefield, tile)
                     println("Newly revealed tile.")
                     # If self count = 0 reveal all unrevealed neighbors
                 end
