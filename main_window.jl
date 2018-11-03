@@ -9,6 +9,10 @@ mutable struct Minesquare
     neighborcount::Int
 end
 
+function flagged(m::Minesquare)
+    return m.flagged
+end
+
 Minesquare() = Minesquare(1, 1, false, false, false, 0)
 Minesquare(x, y) = Minesquare(x, y, false, false, false, 0)
 
@@ -110,13 +114,39 @@ function updatefield!(array, grid)
 end
 
 function revealtiles!(array, tile)
-    tile.revealed = true
+    println("Revealing tiles from $(tile.row), $(tile.column).")
+    if !tile.flagged
+        tile.revealed = true
+    end
     if tile.neighborcount == 0
         neighbors = filter(x -> !x.revealed,
                         getneighbors(array, tile.row, tile.column))
         for neighbor in neighbors
             revealtiles!(array, neighbor)
         end
+    end
+end
+
+function revealflagneighbors!(array, tile)
+    println("Revealing flag neighbors from $(tile.row), $(tile.column).")
+    if !tile.flagged
+        tile.revealed = true
+    end
+    neighbors = filter(x -> (!x.revealed && !x.flagged),
+                    getneighbors(array, tile.row, tile.column))
+    for neighbor in neighbors
+        revealtiles!(array, neighbor)
+    end
+end
+
+function checkflags!(array, tile)
+    flaggedcount = 0
+    foreach(x-> x.flagged ? flaggedcount += 1 : 0,
+            getneighbors(array, tile.row, tile.column))
+    println("Flagged count: $(flaggedcount).")
+    println("Neighborcount: $(tile.neighborcount)")
+    if (flaggedcount == tile.neighborcount) && !tile.flagged
+        revealflagneighbors!(array, tile)
     end
 end
 
@@ -157,8 +187,10 @@ for i = 1:maxcolumn, j=1:maxrow
                 tile.flagged = !tile.flagged
             end
         elseif event.button == 2
+            println("Middle button clicked on $(widget.row), $(widget.column).")
             # Middle mouse is "2"
             # Maybe use for revealed square with correct total flags
+            checkflags!(minefield, tile)
         else
         end
         # Update the field
